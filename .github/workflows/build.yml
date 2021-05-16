@@ -18,11 +18,13 @@ jobs:
 
             - name: Install Dependencies
               run: |
+                  set +e
                   brew install ldid xz
                   brew update
                   brew upgrade
                   brew doctor
                   brew cleanup
+                  set -e
 
             - name: Setup Theos
               uses: actions/checkout@master
