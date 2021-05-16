@@ -24,6 +24,7 @@ jobs:
                   brew upgrade
                   brew doctor
                   brew cleanup
+                  exit 0
                   set -e
 
             - name: Setup Theos
