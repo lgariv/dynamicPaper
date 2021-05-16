@@ -12,3 +12,5 @@ dynamicPaper_CODESIGN_FLAGS = -Sentitlements.plist
 dynamicPaper_INSTALL_PATH = /usr/local/bin
 
 include $(THEOS_MAKE_PATH)/tool.mk
+SUBPROJECTS += dynamicpaperextra
+include $(THEOS_MAKE_PATH)/aggregate.mk

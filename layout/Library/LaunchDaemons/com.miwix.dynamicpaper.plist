@@ -29,7 +29,7 @@
 	<key>UserName</key>
 	<string>root</string>
     <key>KeepAlive</key>
-    <true/>
+    <false/>
     <key>RunAtLoad</key>
 	<false/>
 </dict>
