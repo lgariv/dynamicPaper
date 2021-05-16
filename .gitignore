@@ -1,6 +1,6 @@
-packages
-.theos
 .dragon
-.vscode
 .DS_Store
 *.deb
+/.theos
+/.vscode
+/packages
