@@ -1,6 +1,5 @@
-// #include "../main.h"
-
 @import Foundation;
+
 @interface NSTask : NSObject
 -(id)launchPath;
 -(void)setLaunchPath:(id)arg1 ;

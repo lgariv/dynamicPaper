@@ -6,14 +6,14 @@
     <string>com.miwix.dynamicpaper</string>
     <key>ProgramArguments</key>
     <array>
-        <string>dynamicPaper</string>
+        <string>/usr/local/bin/dynamicPaper</string>
     </array>
     <key>StartInterval</key>
     <integer>86400</integer>
     <key>StandardOutPath</key>
-    <string>/var/root/dynamicPaper.log</string>
+    <string>/var/mobile/dynamicPaper.log</string>
     <key>StandardErrorPath</key>
-    <string>/var/root/dynamicPaper.log</string>
+    <string>/var/mobile/dynamicPaper.log</string>
     <key>Debug</key>
     <true/>
     <key>SoftResourceLimits</key>
@@ -27,10 +27,10 @@
         <integer>9223372036854775807</integer>
     </dict>
 	<key>UserName</key>
-	<string>root</string>
+	<string>mobile</string>
     <key>KeepAlive</key>
-    <false/>
+    <true/>
     <key>RunAtLoad</key>
-	<false/>
+	<true/>
 </dict>
 </plist>
