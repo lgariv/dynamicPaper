@@ -5,7 +5,7 @@ on:
             - main
 env:
     DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
-    SYSROOT: theos/sdks/iPhoneOS13.5.sdk
+    SYSROOT: theos/sdks/iPhoneOS14.4.sdk
     #PATH: /usr/local/Cellar/make/libexec/gnubin:$PATH
 jobs:
     build:
@@ -42,6 +42,7 @@ jobs:
                   brew cleanup
                   exit 0
                   set -e
+
             - name: Setup Theos
               if: steps.cache-dependencies.outputs.cache-hit != 'true'
               uses: actions/checkout@master
@@ -49,6 +50,15 @@ jobs:
                   repository: lgariv/theos
                   ref: abd8d442ba2df9c1cc1b1133e28bda31d704ba7f
                   path: theos
+                  submodules: recursive
+
+            - name: Setup Theos
+              if: steps.cache-dependencies.outputs.cache-hit != 'true'
+              uses: actions/checkout@master
+              with:
+                  repository: theos/sdks
+                  ref: 9099848a90e7f075538312ab503d4aadedd24ef3
+                  path: theos/sdks
                   submodules: recursive
 
             - name: Update Make
