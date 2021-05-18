@@ -1,20 +1,16 @@
 #import "main.h"
 
+#define kScreenHeight [[UIScreen mainScreen] bounds].size.height
+#define kCurrentAppearanceIsLight [[[UIScreen mainScreen] traitCollection] userInterfaceStyle] == UIUserInterfaceStyleLight
+
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
-		// DynamicPaperManager *daemon = [DynamicPaperManager new];
-
-		// printf("%s\n", [[NSString stringWithFormat:@"%@", [daemon nextSunrise]] UTF8String]);
-		// printf("%s\n", [[NSString stringWithFormat:@"%@", [daemon nextSunset]] UTF8String]);
-		// return 0;
-
         // NSString *folderPath = [[NSString alloc] initWithCString:argv[0] encoding:NSUTF8StringEncoding];
-		NSString *folderPath = [NSHomeDirectory() stringByAppendingPathComponent:@"pics/pics"];
+		NSString *homeDirectory = [[NSHomeDirectory() stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"root"];
+		NSString *folderPath = [homeDirectory stringByAppendingPathComponent:@"pics/pics"];
 		NSArray *folderItems = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:folderPath error:nil];
 		folderItems = [folderItems sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
 		int numberOfFileInFolder = [folderItems count];
-
-		// NSTimeInterval secondsBetween = [daemon.nextSunset timeIntervalSinceDate:daemon.nextSunrise];
 
 		NSMutableDictionary *dict = [NSMutableDictionary new];
 		for (int i=0; i<numberOfFileInFolder; i++) {
@@ -24,22 +20,25 @@ int main(int argc, char *argv[], char *envp[]) {
 		DynamicPaperManager *daemon = [[DynamicPaperManager alloc] init];
 
 		//start a timer so that the process does not exit.
-		NSTimer *startTimer = [[NSTimer alloc] initWithFireDate:[NSDate date]
-			interval:0.01
-			target:daemon
-			selector:@selector(initialTimer:)
-			userInfo:dict
-			repeats:NO];
-		NSRunLoop *runLoop = [NSRunLoop mainRunLoop];
-		[runLoop addTimer:startTimer forMode:NSDefaultRunLoopMode];
-		[runLoop run];
+		if ([NSHomeDirectory() containsString:@"root"]) {
+			NSTimer *startTimer = [[NSTimer alloc] initWithFireDate:[NSDate date]
+				interval:0.01
+				target:daemon
+				selector:@selector(initialTimer:)
+				userInfo:dict
+				repeats:NO];
+			NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+			[runLoop addTimer:startTimer forMode:NSRunLoopCommonModes];
+			[runLoop run];
+		}
+		[daemon setWallpaperForCurrentTime];
 		return 0;
 	}
 }
 
 @implementation DynamicPaperManager
 - (id)init {
-	printf("none is nil00\n");
+	printf("DynamicPaperManager init\n");
 
 	NSTimeZone* tz = [NSTimeZone localTimeZone];
 
@@ -83,15 +82,14 @@ int main(int argc, char *argv[], char *envp[]) {
 
 	NSString *folderPath = [NSHomeDirectory() stringByAppendingPathComponent:@"pics"];
 	NSArray *folderItems = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:folderPath error:nil];
-	folderItems = [folderItems sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
 	for (NSString *item in folderItems) {
 		if ([item containsString:@"Light"]) {
 			UIImage *image = [UIImage imageWithContentsOfFile:[folderPath stringByAppendingPathComponent:item]];
-			self.defaultLightWallpaper = [self imageWithImage:image scaledToSize:CGSizeMake([[UIScreen mainScreen] bounds].size.height, [[UIScreen mainScreen] bounds].size.height)];
+			self.defaultLightWallpaper = [self imageWithImage:image scaledToSize:CGSizeMake(kScreenHeight, kScreenHeight)];
 		}
 		if ([item containsString:@"Dark"]) {
 			UIImage *image = [UIImage imageWithContentsOfFile:[folderPath stringByAppendingPathComponent:item]];
-			self.defaultDarkWallpaper = [self imageWithImage:image scaledToSize:CGSizeMake([[UIScreen mainScreen] bounds].size.height, [[UIScreen mainScreen] bounds].size.height)];
+			self.defaultDarkWallpaper = [self imageWithImage:image scaledToSize:CGSizeMake(kScreenHeight, kScreenHeight)];
 		}
 	}
 
@@ -103,66 +101,51 @@ int main(int argc, char *argv[], char *envp[]) {
 
     NSDictionary* userInfo = [[(NSTimer *)timer userInfo] copy];
 
-    // NSCalendar *gregorian = [[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
-
-    // NSDateComponents *todayComponents = [gregorian components:(NSCalendarUnitDay | NSCalendarUnitMonth | NSCalendarUnitYear) fromDate:[NSDate date]];
-    // NSInteger theDay = [todayComponents day];
-    // NSInteger theMonth = [todayComponents month];
-    // NSInteger theYear = [todayComponents year];
-
-    // NSDateComponents *components = [[NSDateComponents alloc] init];
-    // [components setDay:theDay]; 
-    // [components setMonth:theMonth]; 
-    // [components setYear:theYear];
-    // [components setTimeZone:[NSTimeZone localTimeZone]];
-
-    // NSDate* todayDate = [gregorian dateFromComponents:components];
-
-	// NSDateInterval *timeUntilMidnight = [[NSDateInterval alloc] initWithStartDate:[NSDate date] endDate:todayDate];
-
     dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
-		for (int i=0; i<4; i++) {
-			NSDate *timeSinceSunrise = [NSDate dateWithTimeInterval:[[self eightPics][0][i] doubleValue] sinceDate:self.nextSunrise];
-			NSMutableDictionary *wallpaperData = [NSMutableDictionary new];
-			UIImage *image = userInfo[[NSString stringWithFormat:@"%d", i]];
-			UIImage *wallpaper = [self imageWithImage:image scaledToSize:CGSizeMake([[UIScreen mainScreen] bounds].size.height, [[UIScreen mainScreen] bounds].size.height)];
-			[wallpaperData setObject:wallpaper forKey:[NSString stringWithFormat:@"sunrise%d", i]];
-			PCSimpleTimer *wallpaperTimer = [[PCSimpleTimer alloc] initWithFireDate:timeSinceSunrise
-								serviceIdentifier:@"com.miwix.dynamicpaper.service"
-								target:self
-								selector:@selector(changeWallpaper:)
-								userInfo:wallpaperData];
-			[wallpaperTimer setDisableSystemWaking:YES];
-			dispatch_async(dispatch_get_main_queue(), ^{
-				NSRunLoop *runLoop = [NSRunLoop mainRunLoop];
-				[runLoop addTimer:wallpaperTimer forMode:NSDefaultRunLoopMode];
-				[runLoop run];
-			});
-		}
-		for (int i=4; i<8; i++) {
-			NSDate *timeSinceSunset = [NSDate dateWithTimeInterval:[[self eightPics][1][i-4] doubleValue] sinceDate:self.nextSunset];
-			NSMutableDictionary *wallpaperData = [NSMutableDictionary new];
-			UIImage *image = userInfo[[NSString stringWithFormat:@"%d", i]];
-			UIImage *wallpaper = [self imageWithImage:image scaledToSize:CGSizeMake([[UIScreen mainScreen] bounds].size.height, [[UIScreen mainScreen] bounds].size.height)];
-			[wallpaperData setObject:wallpaper forKey:[NSString stringWithFormat:@"sunset%d", i]];
-			PCSimpleTimer *wallpaperTimer = [[PCSimpleTimer alloc] initWithFireDate:timeSinceSunset
-								serviceIdentifier:@"com.miwix.dynamicpaper.service"
-								target:self
-								selector:@selector(changeWallpaper:)
-								userInfo:wallpaperData];
-			[wallpaperTimer setDisableSystemWaking:YES];
-			dispatch_async(dispatch_get_main_queue(), ^{
-				NSRunLoop *runLoop = [NSRunLoop mainRunLoop];
-				[runLoop addTimer:wallpaperTimer forMode:NSDefaultRunLoopMode];
-				[runLoop run];
-			});
-		}
-			[timer invalidate];
-			[self setWallpaperForCurrentTime];
+		dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+			for (int i=0; i<4; i++) {
+				NSDate *timeSinceSunrise = [NSDate dateWithTimeInterval:[[self eightPics][0][i] doubleValue] sinceDate:self.nextSunrise];
+				NSMutableDictionary *wallpaperData = [NSMutableDictionary new];
+				UIImage *image = userInfo[[NSString stringWithFormat:@"%d", i]];
+				UIImage *wallpaper = [self imageWithImage:image scaledToSize:CGSizeMake(kScreenHeight, kScreenHeight)];
+				[wallpaperData setObject:wallpaper forKey:[NSString stringWithFormat:@"sunrise%d", i]];
+				PCSimpleTimer *wallpaperTimer = [[PCSimpleTimer alloc] initWithFireDate:timeSinceSunrise
+									serviceIdentifier:@"com.miwix.dynamicpaper.service"
+									target:self
+									selector:@selector(changeWallpaperWithTimer:)
+									userInfo:wallpaperData];
+				[wallpaperTimer setDisableSystemWaking:YES];
+				dispatch_async(dispatch_get_main_queue(), ^{
+					NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+					[runLoop addTimer:wallpaperTimer forMode:NSRunLoopCommonModes];
+					[runLoop run];
+				});
+			}
+			for (int i=4; i<8; i++) {
+				NSDate *timeSinceSunset = [NSDate dateWithTimeInterval:[[self eightPics][1][i-4] doubleValue] sinceDate:self.nextSunset];
+				NSMutableDictionary *wallpaperData = [NSMutableDictionary new];
+				UIImage *image = userInfo[[NSString stringWithFormat:@"%d", i]];
+				UIImage *wallpaper = [self imageWithImage:image scaledToSize:CGSizeMake(kScreenHeight, kScreenHeight)];
+				[wallpaperData setObject:wallpaper forKey:[NSString stringWithFormat:@"sunset%d", i]];
+				PCSimpleTimer *wallpaperTimer = [[PCSimpleTimer alloc] initWithFireDate:timeSinceSunset
+									serviceIdentifier:@"com.miwix.dynamicpaper.service"
+									target:self
+									selector:@selector(changeWallpaperWithTimer:)
+									userInfo:wallpaperData];
+				[wallpaperTimer setDisableSystemWaking:YES];
+				dispatch_async(dispatch_get_main_queue(), ^{
+					NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+					[runLoop addTimer:wallpaperTimer forMode:NSRunLoopCommonModes];
+					[runLoop run];
+				});
+			}
+		});
+		[timer invalidate];
+		[self setWallpaperForCurrentTime];
 	});
 }
 
-- (void)changeWallpaper:(PCSimpleTimer *)timer {
+- (void)changeWallpaperWithTimer:(PCSimpleTimer *)timer {
 	NSDictionary *userInfo = timer.userInfo;
 	UIImage *lightWallpaper = userInfo.allValues[0];
 	UIImage *darkWallpaper = userInfo.allValues[0];
@@ -171,85 +154,108 @@ int main(int argc, char *argv[], char *envp[]) {
 	} else {
 		lightWallpaper = self.defaultLightWallpaper;
 	}
-	dispatch_async(dispatch_get_main_queue(), ^{
-		setLightAndDarkWallpaperImages(lightWallpaper, darkWallpaper, 3);
+	[self changeWallpaperWithLight:lightWallpaper dark:darkWallpaper];
+}
+
+- (void)changeWallpaperWithLight:(UIImage*)arg1 dark:(UIImage*)arg2 {
+	printf("changeWallpaperWithLight dark 1\n");
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+		setLightAndDarkWallpaperImages(arg1, arg2, 3);
 	});
+	printf("changeWallpaperWithLight dark 4\n");
 }
 
 - (void)setWallpaperForCurrentTime {
-    dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+    // dispatch_sync(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
 		printf("setWallpaperForCurrentTime1\n");
-		NSMutableArray *sunriseTimes = [[NSMutableArray alloc] init];
-		NSMutableArray *sunsetTimes = [[NSMutableArray alloc] init];
+		NSMutableArray __block *sunriseTimes = [[NSMutableArray alloc] init];
+		NSMutableArray __block *sunsetTimes = [[NSMutableArray alloc] init];
 		for (NSNumber *relativeTime in [self eightPics][0]) {
-			printf("relativeTime: %f\n", [relativeTime doubleValue]);
+			// printf("relativeTime: %f\n", [relativeTime doubleValue]);
 			NSDate *timestamp = [[NSDate alloc] initWithTimeInterval:[relativeTime doubleValue] sinceDate:self.nextSunrise];
-			printf("timestamp: %s\n", [[NSString stringWithFormat:@"%@", timestamp] UTF8String]);
+			// printf("timestamp: %s\n", [[NSString stringWithFormat:@"%@", timestamp] UTF8String]);
 			[sunriseTimes addObject:timestamp];
 		}
 		for (NSNumber *relativeTime in [self eightPics][1]) {
-			printf("relativeTime: %f\n", [relativeTime doubleValue]);
+			// printf("relativeTime: %f\n", [relativeTime doubleValue]);
 			NSDate *timestamp = [[NSDate alloc] initWithTimeInterval:[relativeTime doubleValue] sinceDate:self.nextSunset];
-			printf("timestamp: %s\n", [[NSString stringWithFormat:@"%@", timestamp] UTF8String]);
+			// printf("timestamp: %s\n", [[NSString stringWithFormat:@"%@", timestamp] UTF8String]);
 			[sunsetTimes addObject:timestamp];
 		}
+
 		printf("setWallpaperForCurrentTime2\n");
 
-		// printf("sunriseTimes: %s\n", [[NSString stringWithFormat:@"%@", [sunriseTimes description]] UTF8String]);
-		// printf("sunsetTimes: %s\n", [[NSString stringWithFormat:@"%@", [sunsetTimes description]] UTF8String]);
+		// NSTimeInterval sunriseInterval = fabsl([sunriseTimes[0] timeIntervalSinceDate:[NSDate date]]);
+		// printf("initial sunriseInterval: %s\n", [[NSString stringWithFormat:@"%f", sunriseInterval] UTF8String]);
+		// NSUInteger indexOfSunriseDate = 0;
+		// for (int i=0; i<[sunriseTimes count]; i++) {
+		// 	NSTimeInterval sunriseIntervalTest = /*fabsl(*/[sunriseTimes[i] timeIntervalSinceDate:[NSDate date]];//);
+		// 	printf("sunriseInterval %d: %s\n", i, [[NSString stringWithFormat:@"%f, fabsl(%f)", sunriseIntervalTest, fabsl(sunriseIntervalTest)] UTF8String]);
+		// 	if (fabsl([sunriseTimes[i] timeIntervalSinceDate:[NSDate date]]) < fabsl(sunriseInterval)) {
+		// 		sunriseInterval = /*fabsl(*/[sunriseTimes[i] timeIntervalSinceDate:[NSDate date]];//);
+		// 		indexOfSunriseDate = i;
+		// 	}
+		// }
 
-		NSTimeInterval sunriseInterval = fabsl([sunriseTimes[0] timeIntervalSinceDate:[NSDate date]]);
-		printf("initial sunriseInterval: %s\n", [[NSString stringWithFormat:@"%f", sunriseInterval] UTF8String]);
-		NSUInteger indexOfSunriseDate = 0;
-		// for (NSDate *date in sunriseTimes) {
-		for (int i=1; i<[sunriseTimes count]; i++) {
-			if (fabsl([sunriseTimes[i] timeIntervalSinceDate:[NSDate date]]) < sunriseInterval) {
-				sunriseInterval = fabsl([sunriseTimes[i] timeIntervalSinceDate:[NSDate date]]);
-				printf("sunriseInterval %d: %s\n", i, [[NSString stringWithFormat:@"%f", sunriseInterval] UTF8String]);
-				indexOfSunriseDate = i;
+		// NSTimeInterval sunsetInterval = fabsl([sunsetTimes[0] timeIntervalSinceDate:[NSDate date]]);
+		// printf("initial sunsetInterval: %s\n", [[NSString stringWithFormat:@"%f", sunsetInterval] UTF8String]);
+		// NSUInteger indexOfSunsetDate = 0;
+		// for (int i=0; i<[sunsetTimes count]; i++) {
+		// 	NSTimeInterval sunsetIntervalTest = /*fabsl(*/[sunsetTimes[i] timeIntervalSinceDate:[NSDate date]];//);
+		// 	printf("sunsetInterval %d: %s\n", i, [[NSString stringWithFormat:@"%f, fabsl(%f)", sunsetIntervalTest, fabsl(sunsetIntervalTest)] UTF8String]);
+		// 	if (fabsl([sunsetTimes[i] timeIntervalSinceDate:[NSDate date]]) < fabsl(sunsetInterval)) {
+		// 		sunsetInterval = /*fabsl(*/[sunsetTimes[i] timeIntervalSinceDate:[NSDate date]];//);
+		// 		indexOfSunsetDate = i;
+		// 	}
+		// }
+
+		// printf("indexOfSunriseDate: %s, sunriseInterval: %s\n", [[NSString stringWithFormat:@"%d", indexOfSunriseDate] UTF8String], [[NSString stringWithFormat:@"%f", sunriseInterval] UTF8String]);
+		// printf("indexOfSunsetDate: %s, sunsetInterval: %s\n", [[NSString stringWithFormat:@"%d", indexOfSunsetDate] UTF8String], [[NSString stringWithFormat:@"%f", sunsetInterval] UTF8String]);
+
+		NSDate *mostRecentDate = [NSDate distantPast];
+		for (NSDate *date in sunsetTimes) {
+			if ([date timeIntervalSinceNow] <= 0) {
+				mostRecentDate = [date laterDate:mostRecentDate];
+			}
+			printf("[date timeIntervalSinceNow] 1: %lf\n", [date timeIntervalSinceNow]);
+		}
+		bool afterSunrise = [mostRecentDate isEqualToDate:[NSDate distantPast]];
+		if (afterSunrise == true) {
+			for (NSDate *date in sunriseTimes) {
+				if ([date timeIntervalSinceNow] <= 0) {
+					mostRecentDate = [date laterDate:mostRecentDate];
+				}
+				printf("[date timeIntervalSinceNow] 1: %lf\n", [date timeIntervalSinceNow]);
 			}
 		}
+		long index = afterSunrise ? [sunriseTimes indexOfObject:mostRecentDate] : [sunsetTimes indexOfObject:mostRecentDate];
+		if ([mostRecentDate isEqualToDate:[NSDate distantPast]] == true) index = [sunsetTimes count]-1;
+		printf("index: %ld\n", index);
 
-		NSTimeInterval sunsetInterval = fabsl([sunsetTimes[0] timeIntervalSinceDate:[NSDate date]]);
-		printf("initial sunsetInterval: %s\n", [[NSString stringWithFormat:@"%f", sunsetInterval] UTF8String]);
-		NSUInteger indexOfSunsetDate = 0;
-		// for (NSDate *date in sunsetTimes) {
-		for (int i=1; i<[sunsetTimes count]; i++) {
-			if (fabsl([sunsetTimes[i] timeIntervalSinceDate:[NSDate date]]) < sunsetInterval) {
-				sunsetInterval = fabsl([sunsetTimes[i] timeIntervalSinceDate:[NSDate date]]);
-				printf("sunsetInterval %d: %s\n", i, [[NSString stringWithFormat:@"%f", sunsetInterval] UTF8String]);
-				indexOfSunsetDate = i;
-			}
-		}
-
-		printf("indexOfSunriseDate: %s, sunriseInterval: %s\n", [[NSString stringWithFormat:@"%d", indexOfSunriseDate] UTF8String], [[NSString stringWithFormat:@"%f", sunriseInterval] UTF8String]);
-		printf("indexOfSunsetDate: %s, sunsetInterval: %s\n", [[NSString stringWithFormat:@"%d", indexOfSunsetDate] UTF8String], [[NSString stringWithFormat:@"%f", sunsetInterval] UTF8String]);
-
-		NSString *folderPath = [NSHomeDirectory() stringByAppendingPathComponent:@"pics/pics"];
+		NSString *homeDirectory = [[NSHomeDirectory() stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"root"];
+		NSString *folderPath = [homeDirectory stringByAppendingPathComponent:@"pics/pics"];
 		NSArray *folderItems = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:folderPath error:nil];
 		folderItems = [folderItems sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
 		NSUInteger finalIndex;
-		if (sunriseInterval <= sunsetInterval) {
-			finalIndex = indexOfSunriseDate;
-			UIImage *tempWallpaper = [UIImage imageWithContentsOfFile:[folderPath stringByAppendingPathComponent:folderItems[finalIndex]]];
-			UIImage *wallpaper = [self imageWithImage:tempWallpaper scaledToSize:CGSizeMake([[UIScreen mainScreen] bounds].size.height, [[UIScreen mainScreen] bounds].size.height)];
+		if (afterSunrise == true && [mostRecentDate isEqualToDate:[NSDate distantPast]] == false) {
+			finalIndex = index;
 			printf("setWallpaperForCurrentTime41\n");
-			// dispatch_sync(dispatch_get_main_queue(), ^{
-				printf("setWallpaperForCurrentTime4\n");
-				setLightAndDarkWallpaperImages(wallpaper, [self imageWithImage:self.defaultDarkWallpaper scaledToSize:CGSizeMake([[UIScreen mainScreen] bounds].size.height, [[UIScreen mainScreen] bounds].size.height)], 3);
-			// });
+			UIImage *tempWallpaper = [UIImage imageWithContentsOfFile:[folderPath stringByAppendingPathComponent:folderItems[finalIndex]]];
+			UIImage *wallpaper = [self imageWithImage:tempWallpaper scaledToSize:CGSizeMake(kScreenHeight, kScreenHeight)];
+			printf("setWallpaperForCurrentTime4\n");
+			if (index <= 1) [self changeWallpaperWithLight:wallpaper dark:[wallpaper copy]];
+			else [self changeWallpaperWithLight:wallpaper dark:self.defaultDarkWallpaper];
 		} else {
-			finalIndex = indexOfSunsetDate;
-			UIImage *tempWallpaper = [UIImage imageWithContentsOfFile:[folderPath stringByAppendingPathComponent:folderItems[finalIndex+4]]];
-			UIImage *wallpaper = [self imageWithImage:tempWallpaper scaledToSize:CGSizeMake([[UIScreen mainScreen] bounds].size.height, [[UIScreen mainScreen] bounds].size.height)];
+			finalIndex = index+4;
 			printf("setWallpaperForCurrentTime51\n");
-			// dispatch_sync(dispatch_get_main_queue(), ^{
-				printf("setWallpaperForCurrentTime5\n");
-				setLightAndDarkWallpaperImages([self imageWithImage:self.defaultLightWallpaper scaledToSize:CGSizeMake([[UIScreen mainScreen] bounds].size.height, [[UIScreen mainScreen] bounds].size.height)], wallpaper, 3);
-			// });
+			UIImage *tempWallpaper = [UIImage imageWithContentsOfFile:[folderPath stringByAppendingPathComponent:folderItems[finalIndex]]];
+			UIImage *wallpaper = [self imageWithImage:tempWallpaper scaledToSize:CGSizeMake(kScreenHeight, kScreenHeight)];
+			printf("setWallpaperForCurrentTime5\n");
+			if (index <= 1) [self changeWallpaperWithLight:wallpaper dark:[wallpaper copy]];
+			else [self changeWallpaperWithLight:self.defaultLightWallpaper dark:wallpaper];
 		}
 		printf("setWallpaperForCurrentTime6\n");
-	});
+	// });
 }
 
 - (UIImage *)imageWithImage:(UIImage *)image scaledToSize:(CGSize)newSize {

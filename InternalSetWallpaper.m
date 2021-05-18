@@ -31,6 +31,16 @@ void callIntegerSetMethodOnTarget(SEL selector, id target, NSInteger arg2) {
     [inv invoke];
 }
 
+@interface SBFWallpaperConfigurationManager
++(id)alloc;
+-(id)init;
+-(BOOL)setWallpaperImage:(id)arg1 wallpaperOptions:(id)arg2 forVariants:(long long)arg3;
+- (void)wallpaperWillChangeForVariants:(long long)arg1;
+- (void)notifyDelegateOfChangesToVariants:(long long)arg1;
+- (void)beginChangeBatch;
+- (void)performMigrationWithFailureHandler:(id /* block */)arg1;
+@end
+
 void setLightAndDarkWallpaperImages(UIImage *lightImage, UIImage *darkImage, int locations) {
     loadPrivateFramework(@"SpringBoardFoundation.framework");
 
@@ -48,11 +58,21 @@ void setLightAndDarkWallpaperImages(UIImage *lightImage, UIImage *darkImage, int
     callIntegerSetMethodOnTarget(@selector(setWallpaperMode:), darkOptions, 2);
     
     void *sbsUILib = loadFrameworkLibrary(@"SpringBoardUIServices.framework");
-    int (*_SBSUIWallpaperSetImages)(id imageDict, id optionsDict, int locations, int interfaceStyle) = dlsym(sbsUILib, "SBSUIWallpaperSetImages");
-    _SBSUIWallpaperSetImages(@{@"light": lightImage, @"dark": darkImage},
-                             @{@"light": lightOptions, @"dark": darkOptions},
-                             locations,
-                             UIUserInterfaceStyleDark);
+    if (@available(iOS 14, *)) {
+        int (*_SBSUIWallpaperSetImages)(id imageDict, id optionsDict, int locations, int interfaceStyle) = dlsym(sbsUILib, "SBSUIWallpaperSetImages");
+        _SBSUIWallpaperSetImages(@{@"light": lightImage, @"dark": darkImage},
+                                @{@"light": lightOptions, @"dark": darkOptions},
+                                locations,
+                                UIUserInterfaceStyleDark);
+    } else {
+        SBFWallpaperConfigurationManager *wallpaperManager = [[objc_getClass("SBFWallpaperConfigurationManager") alloc] performSelector:initSelector];
+        [wallpaperManager setWallpaperImage:lightImage wallpaperOptions:lightOptions forVariants:locations-1];
+        [wallpaperManager setWallpaperImage:darkImage wallpaperOptions:darkOptions forVariants:locations-1];
+        [wallpaperManager notifyDelegateOfChangesToVariants:locations];
+        [wallpaperManager wallpaperWillChangeForVariants:locations];
+        [wallpaperManager performMigrationWithFailureHandler:nil];
+        [wallpaperManager beginChangeBatch];
+    }
 
 #pragma clang diagnostic pop
 }
